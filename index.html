@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Desk Oasis - Mobile Edition</title>
+    <title>Desk Oasis - Rare Fairy Mutation</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
             background: radial-gradient(circle at 50% 50%, #1a4a45, #0d2b28, #051413);
-            font-family: 'Inter', sans-serif; user-select: none; 
-            touch-action: none; /* PUMIPIGIL SA SCROLL AT PULL-TO-REFRESH SA PHONE */
-            -webkit-user-select: none;
+            font-family: 'Inter', sans-serif; user-select: none;
+            touch-action: none; -webkit-user-select: none;
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -39,23 +38,20 @@
             transition: opacity 0.2s ease, transform 0.2s ease;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100;
         }
-        @media (hover: hover) { /* Tooltips only show on devices with mouse hover */
-            [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
+        @media (hover: hover) { [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
         /* --- UI: HELP BUTTON & GUIDE --- */
         .help-btn {
-            position: absolute; top: 40px; left: 40px;
-            width: 45px; height: 45px; border-radius: 50%;
+            position: absolute; top: 40px; left: 40px; width: 45px; height: 45px; border-radius: 50%;
             background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
             color: rgba(255, 255, 255, 0.8); font-size: 1.2rem; cursor: pointer;
-            backdrop-filter: blur(10px); z-index: 20; transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif;
+            backdrop-filter: blur(10px); z-index: 20; transition: all 0.3s; font-family: 'Inter', sans-serif;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         .help-btn:active { transform: scale(0.95); }
 
         .info-panel { 
-            top: 95px; left: 40px; padding: 20px 25px; width: 250px; 
+            top: 95px; left: 40px; padding: 20px 25px; width: 260px; 
             opacity: 0; transform: translateY(-10px); transition: all 0.3s ease;
         }
         .info-panel.active { opacity: 1; transform: translateY(0); pointer-events: all; }
@@ -68,8 +64,7 @@
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             display: flex; gap: 8px; background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(15px); border-radius: 35px;
-            padding: 8px; border: 1px solid rgba(255, 255, 255, 0.08);
-            z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 8px; border: 1px solid rgba(255, 255, 255, 0.08); z-index: 20; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         .mode-btn {
             background: transparent; border: none; color: rgba(255, 255, 255, 0.5);
@@ -96,8 +91,7 @@
             background: rgba(13, 43, 40, 0.85); backdrop-filter: blur(20px); 
             border: 1px solid rgba(168, 213, 204, 0.2); padding: 30px 40px; border-radius: 20px; 
             text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-            transform: translateY(20px); transition: transform 0.3s ease;
-            width: 80%; max-width: 320px; /* Mobile friendly sizing */
+            transform: translateY(20px); transition: transform 0.3s ease; width: 80%; max-width: 320px;
         }
         .modal-overlay.active .modal-box { transform: translateY(0); }
         .modal-box h2 { margin: 0 0 10px 0; font-weight: 300; color: #fff; letter-spacing: 1px;}
@@ -109,13 +103,10 @@
         .btn-no { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3); }
         .btn-no:active { background: rgba(255,255,255,0.1); }
 
-        /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             .widget-container { width: auto; left: 20px; right: 20px; bottom: 110px; padding: 15px; }
-            #time { font-size: 2.2rem; }
-            .help-btn { top: 20px; left: 20px; }
-            .info-panel { top: 75px; left: 20px; right: 20px; width: auto; }
-            .mode-toggle { bottom: 20px; }
+            #time { font-size: 2.2rem; } .help-btn { top: 20px; left: 20px; }
+            .info-panel { top: 75px; left: 20px; right: 20px; width: auto; } .mode-toggle { bottom: 20px; }
         }
     </style>
 </head>
@@ -128,7 +119,8 @@
         <ul>
             <li><span>🖐</span> <strong>Interact:</strong> Drag fish or lilies.</li>
             <li><span>🍕</span> <strong>Feed:</strong> Tap to drop food.</li>
-            <li><span>❤️</span> <strong>Breed:</strong> Drop a fish on another to mate.</li>
+            <li><span>❤️</span> <strong>Breed:</strong> Drop a fish on another.</li>
+            <li><span>✨</span> <strong>Fairy Koi:</strong> Rare mutation (2%) that glows in the dark!</li>
         </ul>
     </div>
 
@@ -166,17 +158,13 @@
         });
 
         document.getElementById('btnModeInteract').addEventListener('click', (e) => {
-            currentMode = 'interact';
-            e.currentTarget.classList.add('active');
-            document.getElementById('btnModeFeed').classList.remove('active');
-            document.body.style.cursor = 'default';
+            currentMode = 'interact'; e.currentTarget.classList.add('active');
+            document.getElementById('btnModeFeed').classList.remove('active'); document.body.style.cursor = 'default';
         });
 
         document.getElementById('btnModeFeed').addEventListener('click', (e) => {
-            currentMode = 'feed';
-            e.currentTarget.classList.add('active');
-            document.getElementById('btnModeInteract').classList.remove('active');
-            document.body.style.cursor = 'crosshair';
+            currentMode = 'feed'; e.currentTarget.classList.add('active');
+            document.getElementById('btnModeInteract').classList.remove('active'); document.body.style.cursor = 'crosshair';
         });
 
         // --- GLOBALS & SETUP ---
@@ -186,7 +174,6 @@
         let mouseX = -1000, mouseY = -1000;
 
         const ripples = [], lilyPads = [], fishes = [], foods = [], bugs = [], eggClusters = [], raindrops = [];
-        
         let isRaining = false; let rainIntensity = 0; let rainTimer = Math.random() * 1000 + 500;
 
         function resizeCanvas() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
@@ -208,7 +195,7 @@
         }
         setInterval(updateClock, 1000); updateClock();
 
-        const reminders = ["Posture check: Unhunch your back.","Take a sip of water.","Rest your eyes for a moment.","Listen to the rain if it falls.","Eggs take 3 minutes to hatch."];
+        const reminders = ["Posture check: Unhunch your back.","Take a sip of water.","Rest your eyes for a moment.","Listen to the rain if it falls.","Fairy Koi are extremely rare!"];
         let reminderIndex = 0; const reminderEl = document.getElementById('reminder');
         setInterval(() => {
             reminderEl.style.opacity = 0;
@@ -224,16 +211,10 @@
         }
 
         class Raindrop {
-            constructor() {
-                this.x = Math.random() * width; this.y = -20;
-                this.length = Math.random() * 20 + 10; this.speed = Math.random() * 10 + 15;
-            }
+            constructor() { this.x = Math.random() * width; this.y = -20; this.length = Math.random() * 20 + 10; this.speed = Math.random() * 10 + 15; }
             update() {
                 this.y += this.speed; this.x -= this.speed * 0.2; 
-                if (this.y > height) {
-                    if (Math.random() > 0.5) ripples.push({ x: this.x, y: this.y, radius: 1, alpha: 0.3 });
-                    this.y = -20; this.x = Math.random() * width;
-                }
+                if (this.y > height) { if (Math.random() > 0.5) ripples.push({ x: this.x, y: this.y, radius: 1, alpha: 0.3 }); this.y = -20; this.x = Math.random() * width; }
             }
             draw() {
                 ctx.beginPath(); ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * rainIntensity})`;
@@ -243,47 +224,38 @@
         for(let i=0; i<100; i++) raindrops.push(new Raindrop()); 
 
         class WaterStrider {
-            constructor() {
-                this.x = Math.random() * width; this.y = Math.random() * height;
-                this.targetX = this.x; this.targetY = this.y;
-                this.timer = 0; this.angle = 0;
-            }
+            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.targetX = this.x; this.targetY = this.y; this.timer = 0; this.angle = 0; }
             update() {
-                this.timer--;
-                let distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
+                this.timer--; let distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
                 if (distToMouse < 150) {
-                    this.timer = 0; 
-                    let fleeAngle = Math.atan2(this.y - mouseY, this.x - mouseX);
+                    this.timer = 0; let fleeAngle = Math.atan2(this.y - mouseY, this.x - mouseX);
                     this.targetX = this.x + Math.cos(fleeAngle) * 200; this.targetY = this.y + Math.sin(fleeAngle) * 200;
                 }
                 if(this.timer <= 0) {
                     if (distToMouse >= 150) { this.targetX = this.x + (Math.random() * 100 - 50); this.targetY = this.y + (Math.random() * 100 - 50); }
-                    this.timer = Math.random() * 150 + 50; 
-                    this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+                    this.timer = Math.random() * 150 + 50; this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
                     ripples.push({x: this.x, y: this.y, radius: 1, alpha: 0.2}); 
                 }
                 let moveSpeed = distToMouse < 150 ? 0.15 : 0.05; 
                 this.x += (this.targetX - this.x) * moveSpeed; this.y += (this.targetY - this.y) * moveSpeed;
-                if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
-                if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
+                if (this.x < 0) this.x = width; if (this.x > width) this.x = 0; if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
             }
             draw() {
                 ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
                 ctx.fillStyle = 'rgba(200, 255, 200, 0.6)'; ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI*2); ctx.fill(); 
                 ctx.strokeStyle = 'rgba(200, 255, 200, 0.4)'; ctx.lineWidth = 0.5;
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-4, 4); ctx.stroke(); 
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-4, -4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(4, 4); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(4, -4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-4, 4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-4, -4); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(4, 4); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(4, -4); ctx.stroke();
                 ctx.restore();
             }
         }
         for(let i=0; i<8; i++) bugs.push(new WaterStrider());
 
+        // --- NEW GENETICS FOR EGGS ---
         class EggCluster {
-            constructor(parentLily, motherPrimary, motherSecondary, fatherPrimary, fatherSecondary) {
+            constructor(parentLily, motherPrimary, motherSecondary, fatherPrimary, fatherSecondary, motherFairy, fatherFairy) {
                 this.parentLily = parentLily; this.framesUntilHatch = 10800; 
-                this.genes = { mp: motherPrimary, ms: motherSecondary, fp: fatherPrimary, fs: fatherSecondary };
+                this.genes = { mp: motherPrimary, ms: motherSecondary, fp: fatherPrimary, fs: fatherSecondary, mF: motherFairy, fF: fatherFairy };
                 this.eggs = []; let numEggs = Math.floor(Math.random() * 3) + 2;
                 for(let i=0; i<numEggs; i++) this.eggs.push({ offsetX: (Math.random() - 0.5) * (parentLily.size * 0.6), offsetY: (Math.random() - 0.5) * (parentLily.size * 0.6) });
             }
@@ -296,8 +268,23 @@
             }
             hatch() {
                 this.eggs.forEach(egg => {
-                    let newPrimary = mixColors(this.genes.mp, this.genes.fp), newSecondary = mixColors(this.genes.ms, this.genes.fs);
-                    let baby = new Koi(newPrimary, newSecondary, true);
+                    let newPrimary = mixColors(this.genes.mp, this.genes.fp);
+                    let newSecondary = mixColors(this.genes.ms, this.genes.fs);
+                    let isFairyBaby = false;
+
+                    // Fairy Inheritance Logic
+                    if (this.genes.mF || this.genes.fF) {
+                        if (Math.random() < 0.5) isFairyBaby = true; // 50% chance to inherit if one parent is fairy
+                    } else if (Math.random() < 0.02) {
+                        isFairyBaby = true; // 2% SUPER RARE MUTATION from normal parents!
+                    }
+
+                    if (isFairyBaby) {
+                        newPrimary = {r: 255, g: 150, b: 255};   // Fairy Neon Pink
+                        newSecondary = {r: 100, g: 255, b: 255}; // Fairy Neon Cyan
+                    }
+
+                    let baby = new Koi(newPrimary, newSecondary, true, isFairyBaby);
                     baby.x = this.parentLily.x + egg.offsetX; baby.y = this.parentLily.y + egg.offsetY;
                     fishes.push(baby); ripples.push({x: baby.x, y: baby.y, radius: 5, alpha: 0.8});
                 });
@@ -305,10 +292,12 @@
         }
 
         class Koi {
-            constructor(primaryRGB, secondaryRGB, isBaby = false) {
+            constructor(primaryRGB, secondaryRGB, isBaby = false, isFairy = false) {
                 this.x = Math.random() * width; this.y = Math.random() * height;
                 this.angle = Math.random() * Math.PI * 2; this.baseSpeed = Math.random() * 0.4 + 0.4;
                 this.primary = primaryRGB; this.secondary = secondaryRGB;
+                this.isFairy = isFairy; // The magical trait
+                
                 this.targetSize = Math.random() * 0.3 + 0.6; this.size = isBaby ? 0.2 : this.targetSize; 
                 this.growthRate = (this.targetSize - 0.2) / 36000; 
                 this.swimCycle = Math.random() * 100; this.finCycle = Math.random() * 100;
@@ -316,11 +305,15 @@
                 this.isPregnant = false; this.pregnancyFrames = 0; this.widthMultiplier = 1.0; this.mateGenes = null;
             }
 
-            makePregnant(fatherFish) { this.isPregnant = true; this.pregnancyFrames = 7200; this.mateGenes = { p: fatherFish.primary, s: fatherFish.secondary }; }
+            makePregnant(fatherFish) { 
+                this.isPregnant = true; this.pregnancyFrames = 7200; 
+                this.mateGenes = { p: fatherFish.primary, s: fatherFish.secondary, isF: fatherFish.isFairy }; 
+            }
+            
             layEggs() {
                 this.isPregnant = false; this.widthMultiplier = 1.0;
                 let targetLily = lilyPads[Math.floor(Math.random() * lilyPads.length)];
-                eggClusters.push(new EggCluster(targetLily, this.primary, this.secondary, this.mateGenes.p, this.mateGenes.s));
+                eggClusters.push(new EggCluster(targetLily, this.primary, this.secondary, this.mateGenes.p, this.mateGenes.s, this.isFairy, this.mateGenes.isF));
                 this.mateGenes = null;
             }
 
@@ -369,7 +362,14 @@
                 let currentScale = isDragged ? this.size * 1.2 : this.size; ctx.scale(currentScale, currentScale);
                 let wiggle = Math.sin(this.swimCycle) * (this.state === 'darting' ? 2 : 5); 
                 if (this.size < 0.4) wiggle = Math.sin(this.swimCycle * 1.5) * 5;
+
                 let c1 = `rgb(${this.primary.r}, ${this.primary.g}, ${this.primary.b})`; let c2 = `rgb(${this.secondary.r}, ${this.secondary.g}, ${this.secondary.b})`;
+
+                // FAIRY GLOW MAGIC
+                if (this.isFairy) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = `rgba(${this.primary.r}, ${this.primary.g}, ${this.primary.b}, 0.8)`;
+                }
 
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(isDragged ? -20 : -10, isDragged ? 25 : 15, 25, 10 * this.widthMultiplier, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.moveTo(-20, 0); ctx.quadraticCurveTo(-35, wiggle, -50, wiggle * 1.8); ctx.lineTo(-40, 0); ctx.fillStyle = c1; ctx.fill();
@@ -383,21 +383,27 @@
                 ctx.fillStyle = c2; ctx.beginPath(); ctx.arc(5, 0, 6, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(-10, -3 * this.widthMultiplier, 5, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(20, 0, 6, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(22, -4, 1.5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(22, 4, 1.5, 0, Math.PI*2); ctx.fill();
-                ctx.restore();
+                
+                ctx.restore(); // Automatically resets shadowBlur for other elements
             }
         }
 
+        // --- INITIAL SPAWNS ---
         const orangeWhite = { p: {r: 255, g: 94, b: 0}, s: {r: 255, g: 255, b: 255} };
         const goldBlack = { p: {r: 255, g: 179, b: 0}, s: {r: 34, g: 34, b: 34} };
         const whiteRed = { p: {r: 238, g: 238, b: 238}, s: {r: 211, g: 47, b: 47} };
-        fishes.push(new Koi(orangeWhite.p, orangeWhite.s)); fishes.push(new Koi(goldBlack.p, goldBlack.s)); fishes.push(new Koi(whiteRed.p, whiteRed.s)); fishes.push(new Koi(whiteRed.p, goldBlack.s)); 
+        const fairy = { p: {r: 255, g: 150, b: 255}, s: {r: 100, g: 255, b: 255} }; // Fairy Colors!
+
+        fishes.push(new Koi(orangeWhite.p, orangeWhite.s)); 
+        fishes.push(new Koi(goldBlack.p, goldBlack.s)); 
+        fishes.push(new Koi(whiteRed.p, whiteRed.s)); 
+        fishes.push(new Koi(fairy.p, fairy.s, false, true)); // 1 RARE FAIRY SPAWNS BY DEFAULT!
 
         const modal = document.getElementById('breedModal');
         document.getElementById('btnBreedYes').addEventListener('click', () => { if (breedingParents) breedingParents.mother.makePregnant(breedingParents.father); closeModal(); });
         document.getElementById('btnBreedNo').addEventListener('click', closeModal);
         function closeModal() { modal.classList.remove('active'); setTimeout(() => { isModalOpen = false; breedingParents = null; }, 300); }
 
-        // --- MOBILE FRIENDLY EVENTS (pointer events instead of mouse) ---
         window.addEventListener('pointerdown', (e) => {
             if (isModalOpen) return;
             if (e.target.closest('[data-tooltip]') || e.target.closest('.glass-panel') || e.target.closest('.mode-toggle') || e.target.closest('.help-btn')) return;
@@ -429,7 +435,7 @@
         });
 
         window.addEventListener('pointerup', (e) => {
-            mouseX = -1000; mouseY = -1000; // Clear touch position so bugs calm down
+            mouseX = -1000; mouseY = -1000; 
             if (draggedFish && !isModalOpen && currentMode === 'interact') {
                 let droppedOnFish = null;
                 for (let fish of fishes) {
@@ -442,9 +448,7 @@
             draggedFish = null; draggedLily = null; 
         });
 
-        window.addEventListener('pointercancel', () => {
-            mouseX = -1000; mouseY = -1000; draggedFish = null; draggedLily = null; 
-        });
+        window.addEventListener('pointercancel', () => { mouseX = -1000; mouseY = -1000; draggedFish = null; draggedLily = null; });
 
         function updateWeather() {
             rainTimer--;

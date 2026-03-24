@@ -2,15 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desk Oasis - Weather & Minimalist UI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Desk Oasis - Mobile Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
             background: radial-gradient(circle at 50% 50%, #1a4a45, #0d2b28, #051413);
-            font-family: 'Inter', sans-serif; user-select: none;
+            font-family: 'Inter', sans-serif; user-select: none; 
+            touch-action: none; /* PUMIPIGIL SA SCROLL AT PULL-TO-REFRESH SA PHONE */
+            -webkit-user-select: none;
         }
 
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -37,7 +39,9 @@
             transition: opacity 0.2s ease, transform 0.2s ease;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 100;
         }
-        [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+        @media (hover: hover) { /* Tooltips only show on devices with mouse hover */
+            [data-tooltip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
 
         /* --- UI: HELP BUTTON & GUIDE --- */
         .help-btn {
@@ -48,7 +52,7 @@
             backdrop-filter: blur(10px); z-index: 20; transition: all 0.3s;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif;
         }
-        .help-btn:hover { background: rgba(255, 255, 255, 0.15); color: #fff; transform: scale(1.05); }
+        .help-btn:active { transform: scale(0.95); }
 
         .info-panel { 
             top: 95px; left: 40px; padding: 20px 25px; width: 250px; 
@@ -72,7 +76,6 @@
             width: 45px; height: 45px; border-radius: 50%; font-size: 1.3rem; 
             cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;
         }
-        .mode-btn:hover { color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.05); }
         .mode-btn.active { background: rgba(255, 255, 255, 0.15); color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 
         /* --- UI: WIDGET --- */
@@ -94,6 +97,7 @@
             border: 1px solid rgba(168, 213, 204, 0.2); padding: 30px 40px; border-radius: 20px; 
             text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
             transform: translateY(20px); transition: transform 0.3s ease;
+            width: 80%; max-width: 320px; /* Mobile friendly sizing */
         }
         .modal-overlay.active .modal-box { transform: translateY(0); }
         .modal-box h2 { margin: 0 0 10px 0; font-weight: 300; color: #fff; letter-spacing: 1px;}
@@ -101,9 +105,18 @@
         .btn-group { display: flex; gap: 15px; justify-content: center; }
         .btn { padding: 10px 25px; border-radius: 30px; border: none; font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
         .btn-yes { background: #3e7a68; color: #fff; border: 1px solid #4a9e86; }
-        .btn-yes:hover { background: #4a9e86; transform: scale(1.05); }
+        .btn-yes:active { transform: scale(0.95); }
         .btn-no { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3); }
-        .btn-no:hover { background: rgba(255,255,255,0.1); }
+        .btn-no:active { background: rgba(255,255,255,0.1); }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 768px) {
+            .widget-container { width: auto; left: 20px; right: 20px; bottom: 110px; padding: 15px; }
+            #time { font-size: 2.2rem; }
+            .help-btn { top: 20px; left: 20px; }
+            .info-panel { top: 75px; left: 20px; right: 20px; width: auto; }
+            .mode-toggle { bottom: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -113,8 +126,8 @@
     <div id="guidePanel" class="glass-panel info-panel">
         <h3>Pond Guide</h3>
         <ul>
-            <li><span>🖐</span> <strong>Interact:</strong> Drag fish or lily pads.</li>
-            <li><span>🍕</span> <strong>Feed:</strong> Tap water to drop food.</li>
+            <li><span>🖐</span> <strong>Interact:</strong> Drag fish or lilies.</li>
+            <li><span>🍕</span> <strong>Feed:</strong> Tap to drop food.</li>
             <li><span>❤️</span> <strong>Breed:</strong> Drop a fish on another to mate.</li>
         </ul>
     </div>
@@ -134,9 +147,9 @@
     <div class="modal-overlay" id="breedModal">
         <div class="modal-box">
             <h2>Mate Koi?</h2>
-            <p>The female will carry eggs for 2 mins, then lay them on a lily pad.</p>
+            <p>She'll carry eggs for 2 mins, then lay them on a lily pad.</p>
             <div class="btn-group">
-                <button class="btn btn-yes" id="btnBreedYes">Yes, mate</button>
+                <button class="btn btn-yes" id="btnBreedYes">Yes</button>
                 <button class="btn btn-no" id="btnBreedNo">Cancel</button>
             </div>
         </div>
@@ -174,10 +187,7 @@
 
         const ripples = [], lilyPads = [], fishes = [], foods = [], bugs = [], eggClusters = [], raindrops = [];
         
-        // --- WEATHER LOGIC ---
-        let isRaining = false;
-        let rainIntensity = 0; // 0 to 1
-        let rainTimer = Math.random() * 1000 + 500; // Time until next weather change
+        let isRaining = false; let rainIntensity = 0; let rainTimer = Math.random() * 1000 + 500;
 
         function resizeCanvas() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
@@ -198,7 +208,7 @@
         }
         setInterval(updateClock, 1000); updateClock();
 
-        const reminders = ["Posture check: Unhunch your back.","Take a sip of water.","Look at something far away to rest your eyes.","Listen to the rain if it falls.","Eggs take 3 minutes to hatch."];
+        const reminders = ["Posture check: Unhunch your back.","Take a sip of water.","Rest your eyes for a moment.","Listen to the rain if it falls.","Eggs take 3 minutes to hatch."];
         let reminderIndex = 0; const reminderEl = document.getElementById('reminder');
         setInterval(() => {
             reminderEl.style.opacity = 0;
@@ -215,31 +225,22 @@
 
         class Raindrop {
             constructor() {
-                this.x = Math.random() * width;
-                this.y = -20;
-                this.length = Math.random() * 20 + 10;
-                this.speed = Math.random() * 10 + 15;
+                this.x = Math.random() * width; this.y = -20;
+                this.length = Math.random() * 20 + 10; this.speed = Math.random() * 10 + 15;
             }
             update() {
-                this.y += this.speed;
-                this.x -= this.speed * 0.2; // Slight angle due to wind
+                this.y += this.speed; this.x -= this.speed * 0.2; 
                 if (this.y > height) {
-                    // Create ripple when it hits the "water"
                     if (Math.random() > 0.5) ripples.push({ x: this.x, y: this.y, radius: 1, alpha: 0.3 });
-                    this.y = -20;
-                    this.x = Math.random() * width;
+                    this.y = -20; this.x = Math.random() * width;
                 }
             }
             draw() {
-                ctx.beginPath();
-                ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * rainIntensity})`;
-                ctx.lineWidth = 1;
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(this.x - this.length * 0.2, this.y + this.length);
-                ctx.stroke();
+                ctx.beginPath(); ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * rainIntensity})`;
+                ctx.lineWidth = 1; ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - this.length * 0.2, this.y + this.length); ctx.stroke();
             }
         }
-        for(let i=0; i<100; i++) raindrops.push(new Raindrop()); // Max raindrops
+        for(let i=0; i<100; i++) raindrops.push(new Raindrop()); 
 
         class WaterStrider {
             constructor() {
@@ -253,23 +254,16 @@
                 if (distToMouse < 150) {
                     this.timer = 0; 
                     let fleeAngle = Math.atan2(this.y - mouseY, this.x - mouseX);
-                    this.targetX = this.x + Math.cos(fleeAngle) * 200; 
-                    this.targetY = this.y + Math.sin(fleeAngle) * 200;
+                    this.targetX = this.x + Math.cos(fleeAngle) * 200; this.targetY = this.y + Math.sin(fleeAngle) * 200;
                 }
-
                 if(this.timer <= 0) {
-                    if (distToMouse >= 150) {
-                        this.targetX = this.x + (Math.random() * 100 - 50);
-                        this.targetY = this.y + (Math.random() * 100 - 50);
-                    }
+                    if (distToMouse >= 150) { this.targetX = this.x + (Math.random() * 100 - 50); this.targetY = this.y + (Math.random() * 100 - 50); }
                     this.timer = Math.random() * 150 + 50; 
                     this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
                     ripples.push({x: this.x, y: this.y, radius: 1, alpha: 0.2}); 
                 }
-                
                 let moveSpeed = distToMouse < 150 ? 0.15 : 0.05; 
                 this.x += (this.targetX - this.x) * moveSpeed; this.y += (this.targetY - this.y) * moveSpeed;
-                
                 if (this.x < 0) this.x = width; if (this.x > width) this.x = 0;
                 if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
             }
@@ -290,8 +284,7 @@
             constructor(parentLily, motherPrimary, motherSecondary, fatherPrimary, fatherSecondary) {
                 this.parentLily = parentLily; this.framesUntilHatch = 10800; 
                 this.genes = { mp: motherPrimary, ms: motherSecondary, fp: fatherPrimary, fs: fatherSecondary };
-                this.eggs = [];
-                let numEggs = Math.floor(Math.random() * 3) + 2;
+                this.eggs = []; let numEggs = Math.floor(Math.random() * 3) + 2;
                 for(let i=0; i<numEggs; i++) this.eggs.push({ offsetX: (Math.random() - 0.5) * (parentLily.size * 0.6), offsetY: (Math.random() - 0.5) * (parentLily.size * 0.6) });
             }
             update() { this.framesUntilHatch--; if (this.framesUntilHatch <= 0) { this.hatch(); return true; } return false; }
@@ -314,21 +307,16 @@
         class Koi {
             constructor(primaryRGB, secondaryRGB, isBaby = false) {
                 this.x = Math.random() * width; this.y = Math.random() * height;
-                this.angle = Math.random() * Math.PI * 2; 
-                
-                this.baseSpeed = Math.random() * 0.4 + 0.4;
+                this.angle = Math.random() * Math.PI * 2; this.baseSpeed = Math.random() * 0.4 + 0.4;
                 this.primary = primaryRGB; this.secondary = secondaryRGB;
-                this.targetSize = Math.random() * 0.3 + 0.6; 
-                this.size = isBaby ? 0.2 : this.targetSize; 
+                this.targetSize = Math.random() * 0.3 + 0.6; this.size = isBaby ? 0.2 : this.targetSize; 
                 this.growthRate = (this.targetSize - 0.2) / 36000; 
-                
                 this.swimCycle = Math.random() * 100; this.finCycle = Math.random() * 100;
                 this.state = 'steady'; this.stateTimer = Math.random() * 200 + 100; this.currentSpeedMult = 1.0;
                 this.isPregnant = false; this.pregnancyFrames = 0; this.widthMultiplier = 1.0; this.mateGenes = null;
             }
 
             makePregnant(fatherFish) { this.isPregnant = true; this.pregnancyFrames = 7200; this.mateGenes = { p: fatherFish.primary, s: fatherFish.secondary }; }
-
             layEggs() {
                 this.isPregnant = false; this.widthMultiplier = 1.0;
                 let targetLily = lilyPads[Math.floor(Math.random() * lilyPads.length)];
@@ -352,7 +340,6 @@
             update() {
                 if (this.size < this.targetSize) this.size += this.growthRate;
                 if (this.isPregnant) { this.pregnancyFrames--; if (this.widthMultiplier < 1.6) this.widthMultiplier += 0.0005; if (this.pregnancyFrames <= 0) this.layEggs(); }
-
                 if (draggedFish === this) { this.swimCycle += 0.8; this.finCycle += 0.5; this.draw(true); return; }
                 
                 this.updateBehavior();
@@ -370,11 +357,9 @@
                 
                 let finalSpeed = this.baseSpeed * this.currentSpeedMult;
                 if (this.size < 0.4) finalSpeed *= 1.3; if (this.isPregnant) finalSpeed *= 0.6; 
-
                 this.x += Math.cos(this.angle) * finalSpeed; this.y += Math.sin(this.angle) * finalSpeed; this.swimCycle += finalSpeed * 0.1;
                 
                 if (this.state === 'resting') this.finCycle += 0.02; else if (this.state === 'steady') this.finCycle += 0.08; else this.finCycle = 0;
-                
                 if (this.x < -100) this.x = width + 100; if (this.x > width + 100) this.x = -100; if (this.y < -100) this.y = height + 100; if (this.y > height + 100) this.y = -100;
                 this.draw(false);
             }
@@ -384,7 +369,6 @@
                 let currentScale = isDragged ? this.size * 1.2 : this.size; ctx.scale(currentScale, currentScale);
                 let wiggle = Math.sin(this.swimCycle) * (this.state === 'darting' ? 2 : 5); 
                 if (this.size < 0.4) wiggle = Math.sin(this.swimCycle * 1.5) * 5;
-
                 let c1 = `rgb(${this.primary.r}, ${this.primary.g}, ${this.primary.b})`; let c2 = `rgb(${this.secondary.r}, ${this.secondary.g}, ${this.secondary.b})`;
 
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(isDragged ? -20 : -10, isDragged ? 25 : 15, 25, 10 * this.widthMultiplier, 0, 0, Math.PI * 2); ctx.fill();
@@ -413,9 +397,12 @@
         document.getElementById('btnBreedNo').addEventListener('click', closeModal);
         function closeModal() { modal.classList.remove('active'); setTimeout(() => { isModalOpen = false; breedingParents = null; }, 300); }
 
-        window.addEventListener('mousedown', (e) => {
+        // --- MOBILE FRIENDLY EVENTS (pointer events instead of mouse) ---
+        window.addEventListener('pointerdown', (e) => {
             if (isModalOpen) return;
             if (e.target.closest('[data-tooltip]') || e.target.closest('.glass-panel') || e.target.closest('.mode-toggle') || e.target.closest('.help-btn')) return;
+
+            mouseX = e.clientX; mouseY = e.clientY; 
 
             if (currentMode === 'interact') {
                 let lilyCaught = null, fishCaught = null;
@@ -430,9 +417,10 @@
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX; mouseY = e.clientY; 
+        window.addEventListener('pointermove', (e) => {
             if (isModalOpen) return;
+            mouseX = e.clientX; mouseY = e.clientY; 
+            
             if (draggedLily) { draggedLily.x = e.clientX; draggedLily.y = e.clientY; } 
             else if (draggedFish) { draggedFish.x = e.clientX; draggedFish.y = e.clientY; } 
             else if (Math.random() > 0.6 && !e.target.closest('[data-tooltip]') && !e.target.closest('.glass-panel') && !e.target.closest('.mode-toggle')) {
@@ -440,7 +428,8 @@
             }
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('pointerup', (e) => {
+            mouseX = -1000; mouseY = -1000; // Clear touch position so bugs calm down
             if (draggedFish && !isModalOpen && currentMode === 'interact') {
                 let droppedOnFish = null;
                 for (let fish of fishes) {
@@ -453,14 +442,13 @@
             draggedFish = null; draggedLily = null; 
         });
 
+        window.addEventListener('pointercancel', () => {
+            mouseX = -1000; mouseY = -1000; draggedFish = null; draggedLily = null; 
+        });
+
         function updateWeather() {
             rainTimer--;
-            if (rainTimer <= 0) {
-                isRaining = !isRaining;
-                rainTimer = Math.random() * 2000 + 1000; // Hold weather state
-            }
-            
-            // Smoothly fade rain in/out
+            if (rainTimer <= 0) { isRaining = !isRaining; rainTimer = Math.random() * 2000 + 1000; }
             if (isRaining && rainIntensity < 1) rainIntensity += 0.005;
             if (!isRaining && rainIntensity > 0) rainIntensity -= 0.005;
             if (rainIntensity < 0) rainIntensity = 0;
@@ -474,7 +462,6 @@
             for (let i = eggClusters.length - 1; i >= 0; i--) { eggClusters[i].draw(); if(eggClusters[i].update()) eggClusters.splice(i, 1); }
             fishes.forEach(fish => fish.update());
             
-            // Draw Weather (Raindrops)
             if (rainIntensity > 0) {
                 let numDropsToDraw = Math.floor(raindrops.length * rainIntensity);
                 for(let i = 0; i < numDropsToDraw; i++) raindrops[i].update(), raindrops[i].draw();

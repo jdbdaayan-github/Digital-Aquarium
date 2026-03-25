@@ -153,9 +153,10 @@
         const canvas = document.getElementById('pondCanvas'); const ctx = canvas.getContext('2d');
         let width, height, draggedFish = null, draggedLily = null, isModalOpen = false, breedingParents = null, mythicalKoi = null;
         let mouseX = -1000, mouseY = -1000;
+        let lastTime = 0; // PARA SA DELTA TIME
 
         const ripples = [], lilyPads = [], fishes = [], foods = [], bugs = [], eggClusters = [], raindrops = [];
-        let isRaining = false, rainIntensity = 0, rainTimer = Math.random() * 1000 + 500;
+        let isRaining = false, rainIntensity = 0, rainTimerMs = Math.random() * 16000 + 8000; // in milliseconds
 
         function resizeCanvas() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
@@ -163,6 +164,34 @@
         for(let i = 0; i < 9; i++) {
             lilyPads.push({ x: Math.random() * width, y: Math.random() * height, size: Math.random() * 50 + 40, angle: Math.random() * Math.PI * 2, notch: Math.random() * 0.5 + 0.2, vx: (Math.random() - 0.5) * 0.1, vy: (Math.random() - 0.5) * 0.1, vAngle: (Math.random() - 0.5) * 0.002 });
         }
+
+        function resolveLilyCollisions() {
+    for (let i = 0; i < lilyPads.length; i++) {
+        for (let j = i + 1; j < lilyPads.length; j++) {
+            let a = lilyPads[i];
+            let b = lilyPads[j];
+
+            let dx = b.x - a.x;
+            let dy = b.y - a.y;
+            let dist = Math.hypot(dx, dy);
+
+            let minDist = a.size + b.size;
+
+            if (dist < minDist) {
+                let angle = Math.atan2(dy, dx);
+                let overlap = (minDist - dist) / 2;
+
+                let offsetX = Math.cos(angle) * overlap;
+                let offsetY = Math.sin(angle) * overlap;
+
+                a.x -= offsetX;
+                a.y -= offsetY;
+                b.x += offsetX;
+                b.y += offsetY;
+            }
+        }
+    }
+}
 
         function updateClock() {
             const now = new Date(); let hours = now.getHours(), minutes = now.getMinutes(), ampm = hours >= 12 ? 'PM' : 'AM';
@@ -184,35 +213,35 @@
             return { r: Math.max(0, Math.min(255, Math.floor((c1.r + c2.r) / 2) + mutate())), g: Math.max(0, Math.min(255, Math.floor((c1.g + c2.g) / 2) + mutate())), b: Math.max(0, Math.min(255, Math.floor((c1.b + c2.b) / 2) + mutate())) };
         }
 
-        // --- NEW: THE MYTHICAL SPIRIT KOI ---
+        // --- THE MYTHICAL SPIRIT KOI ---
         class MythicalKoi {
             constructor() {
                 this.x = Math.random() * width; this.y = Math.random() * height;
                 this.angle = Math.random() * Math.PI * 2;
-                this.baseSpeed = 0.6; this.size = 0.9; // Mas malaki sa normal
+                this.baseSpeed = 0.6; this.size = 0.9; 
                 this.swimCycle = Math.random() * 100; this.finCycle = 0;
                 
-                this.state = 'emerging'; // emerging, swimming, diving
+                this.state = 'emerging'; 
                 this.alpha = 0; this.depthScale = 0.5; 
-                this.lifeTimer = 1000; // Tagal lumangoy bago sumisid (approx 16 seconds)
+                this.lifeTimerMs = 16000; // 16 seconds in real time
             }
             
-            update() {
+            update(dt, deltaMs) {
                 if (this.state === 'emerging') {
-                    this.alpha += 0.005; this.depthScale += 0.0025;
+                    this.alpha += 0.005 * dt; this.depthScale += 0.0025 * dt;
                     if (this.alpha >= 1) { this.alpha = 1; this.depthScale = 1; this.state = 'swimming'; }
                 } else if (this.state === 'swimming') {
-                    this.lifeTimer--;
-                    if (this.lifeTimer <= 0) this.state = 'diving';
+                    this.lifeTimerMs -= deltaMs; // Bawas base sa totoong oras
+                    if (this.lifeTimerMs <= 0) this.state = 'diving';
                 } else if (this.state === 'diving') {
-                    this.alpha -= 0.005; this.depthScale -= 0.0025;
+                    this.alpha -= 0.005 * dt; this.depthScale -= 0.0025 * dt;
                 }
 
-                this.angle += (Math.random() - 0.5) * 0.03; // Gentle curve
-                this.x += Math.cos(this.angle) * this.baseSpeed;
-                this.y += Math.sin(this.angle) * this.baseSpeed;
-                this.swimCycle += this.baseSpeed * 0.1;
-                this.finCycle += 0.05;
+                this.angle += (Math.random() - 0.5) * 0.03 * dt; 
+                this.x += Math.cos(this.angle) * this.baseSpeed * dt;
+                this.y += Math.sin(this.angle) * this.baseSpeed * dt;
+                this.swimCycle += this.baseSpeed * 0.1 * dt;
+                this.finCycle += 0.05 * dt;
                 
                 if (this.x < -100) this.x = width + 100; if (this.x > width + 100) this.x = -100;
                 if (this.y < -100) this.y = height + 100; if (this.y > height + 100) this.y = -100;
@@ -223,28 +252,21 @@
                 ctx.translate(this.x, this.y); ctx.rotate(this.angle);
                 let currentScale = this.size * this.depthScale; ctx.scale(currentScale, currentScale);
 
-                let wiggle = Math.sin(this.swimCycle) * 6; // Elegant long wiggle
-
-                // Glow Effect
+                let wiggle = Math.sin(this.swimCycle) * 6; 
                 ctx.shadowBlur = 30; ctx.shadowColor = "rgba(255, 230, 100, 1)";
                 let c1 = "#fffacd", c2 = "#ffcc00"; 
 
-                // Extra Long Tail
                 ctx.beginPath(); ctx.moveTo(-20, 0); ctx.quadraticCurveTo(-45, wiggle, -80, wiggle * 2); ctx.lineTo(-50, 0); ctx.fillStyle = c1; ctx.fill();
                 
-                // Elegant Fins
                 ctx.fillStyle = `rgba(255, 255, 255, 0.8)`; let finAngle = Math.sin(this.finCycle) * 0.4; 
                 ctx.save(); ctx.translate(5, 7); ctx.rotate(-finAngle); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-20, 15, -35, 5); ctx.quadraticCurveTo(-20, -2, -5, -2); ctx.fill(); ctx.restore();
                 ctx.save(); ctx.translate(5, -7); ctx.rotate(finAngle); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(-20, -15, -35, -5); ctx.quadraticCurveTo(-20, 2, -5, 2); ctx.fill(); ctx.restore();
 
-                // Body
                 ctx.fillStyle = c1; ctx.beginPath(); ctx.ellipse(0, 0, 28, 12, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = c2; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-10, -5); ctx.lineTo(-15, 0); ctx.lineTo(-10, 5); ctx.fill();
                 
-                // Head & Eyes
                 ctx.fillStyle = c1; ctx.beginPath(); ctx.arc(22, 0, 7, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(24, -4, 2, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(24, 4, 2, 0, Math.PI*2); ctx.fill();
-                
                 ctx.restore();
             }
         }
@@ -252,8 +274,8 @@
         // --- OTHER ENTITIES ---
         class Raindrop {
             constructor() { this.x = Math.random() * width; this.y = -20; this.length = Math.random() * 20 + 10; this.speed = Math.random() * 10 + 15; }
-            update() {
-                this.y += this.speed; this.x -= this.speed * 0.2; 
+            update(dt) {
+                this.y += this.speed * dt; this.x -= this.speed * 0.2 * dt; 
                 if (this.y > height) { if (Math.random() > 0.5) ripples.push({ x: this.x, y: this.y, radius: 1, alpha: 0.3 }); this.y = -20; this.x = Math.random() * width; }
             }
             draw() {
@@ -264,20 +286,20 @@
         for(let i=0; i<100; i++) raindrops.push(new Raindrop()); 
 
         class WaterStrider {
-            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.targetX = this.x; this.targetY = this.y; this.timer = 0; this.angle = 0; }
-            update() {
-                this.timer--; let distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
+            constructor() { this.x = Math.random() * width; this.y = Math.random() * height; this.targetX = this.x; this.targetY = this.y; this.timerMs = 0; this.angle = 0; }
+            update(dt, deltaMs) {
+                this.timerMs -= deltaMs; let distToMouse = Math.hypot(mouseX - this.x, mouseY - this.y);
                 if (distToMouse < 150) {
-                    this.timer = 0; let fleeAngle = Math.atan2(this.y - mouseY, this.x - mouseX);
+                    this.timerMs = 0; let fleeAngle = Math.atan2(this.y - mouseY, this.x - mouseX);
                     this.targetX = this.x + Math.cos(fleeAngle) * 200; this.targetY = this.y + Math.sin(fleeAngle) * 200;
                 }
-                if(this.timer <= 0) {
+                if(this.timerMs <= 0) {
                     if (distToMouse >= 150) { this.targetX = this.x + (Math.random() * 100 - 50); this.targetY = this.y + (Math.random() * 100 - 50); }
-                    this.timer = Math.random() * 150 + 50; this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
+                    this.timerMs = Math.random() * 2500 + 800; this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
                     ripples.push({x: this.x, y: this.y, radius: 1, alpha: 0.2}); 
                 }
                 let moveSpeed = distToMouse < 150 ? 0.15 : 0.05; 
-                this.x += (this.targetX - this.x) * moveSpeed; this.y += (this.targetY - this.y) * moveSpeed;
+                this.x += (this.targetX - this.x) * moveSpeed * dt; this.y += (this.targetY - this.y) * moveSpeed * dt;
                 if (this.x < 0) this.x = width; if (this.x > width) this.x = 0; if (this.y < 0) this.y = height; if (this.y > height) this.y = 0;
             }
             draw() {
@@ -293,12 +315,13 @@
 
         class EggCluster {
             constructor(parentLily, motherPrimary, motherSecondary, fatherPrimary, fatherSecondary, motherFairy, fatherFairy) {
-                this.parentLily = parentLily; this.framesUntilHatch = 10800; 
+                this.parentLily = parentLily; 
+                this.timeLeftMs = 180000; // 3 minutes in real time
                 this.genes = { mp: motherPrimary, ms: motherSecondary, fp: fatherPrimary, fs: fatherSecondary, mF: motherFairy, fF: fatherFairy };
                 this.eggs = []; let numEggs = Math.floor(Math.random() * 3) + 2;
                 for(let i=0; i<numEggs; i++) this.eggs.push({ offsetX: (Math.random() - 0.5) * (parentLily.size * 0.6), offsetY: (Math.random() - 0.5) * (parentLily.size * 0.6) });
             }
-            update() { this.framesUntilHatch--; if (this.framesUntilHatch <= 0) { this.hatch(); return true; } return false; }
+            update(deltaMs) { this.timeLeftMs -= deltaMs; if (this.timeLeftMs <= 0) { this.hatch(); return true; } return false; }
             draw() {
                 ctx.save(); ctx.translate(this.parentLily.x, this.parentLily.y);
                 ctx.fillStyle = 'rgba(255, 255, 200, 0.8)'; ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; ctx.lineWidth = 1;
@@ -327,13 +350,12 @@
                 this.angle = Math.random() * Math.PI * 2; this.baseSpeed = Math.random() * 0.4 + 0.4;
                 this.primary = primaryRGB; this.secondary = secondaryRGB; this.isFairy = isFairy;
                 this.targetSize = Math.random() * 0.3 + 0.6; this.size = isBaby ? 0.2 : this.targetSize; 
-                this.growthRate = (this.targetSize - 0.2) / 36000; 
                 this.swimCycle = Math.random() * 100; this.finCycle = Math.random() * 100;
-                this.state = 'steady'; this.stateTimer = Math.random() * 200 + 100; this.currentSpeedMult = 1.0;
-                this.isPregnant = false; this.pregnancyFrames = 0; this.widthMultiplier = 1.0; this.mateGenes = null;
+                this.state = 'steady'; this.stateTimerMs = Math.random() * 3000 + 1500; this.currentSpeedMult = 1.0;
+                this.isPregnant = false; this.pregnancyTimeMs = 0; this.widthMultiplier = 1.0; this.mateGenes = null;
             }
 
-            makePregnant(fatherFish) { this.isPregnant = true; this.pregnancyFrames = 7200; this.mateGenes = { p: fatherFish.primary, s: fatherFish.secondary, isF: fatherFish.isFairy }; }
+            makePregnant(fatherFish) { this.isPregnant = true; this.pregnancyTimeMs = 120000; /* 2 minutes */ this.mateGenes = { p: fatherFish.primary, s: fatherFish.secondary, isF: fatherFish.isFairy }; }
             
             layEggs() {
                 this.isPregnant = false; this.widthMultiplier = 1.0;
@@ -342,25 +364,39 @@
                 this.mateGenes = null;
             }
 
-            updateBehavior() {
-                this.stateTimer--;
-                if (this.stateTimer <= 0) {
+            updateBehavior(deltaMs) {
+                this.stateTimerMs -= deltaMs;
+                if (this.stateTimerMs <= 0) {
                     let rand = Math.random();
-                    if (rand < 0.6) { this.state = 'steady'; this.stateTimer = Math.random() * 300 + 200; } 
-                    else if (rand < 0.85) { this.state = 'resting'; this.stateTimer = Math.random() * 150 + 50; } 
-                    else { this.state = 'darting'; this.stateTimer = Math.random() * 50 + 30; }
+                    if (rand < 0.6) { this.state = 'steady'; this.stateTimerMs = Math.random() * 5000 + 3000; } 
+                    else if (rand < 0.85) { this.state = 'resting'; this.stateTimerMs = Math.random() * 2500 + 800; } 
+                    else { this.state = 'darting'; this.stateTimerMs = Math.random() * 800 + 500; }
                 }
-                if (this.state === 'steady') this.currentSpeedMult += (1.0 - this.currentSpeedMult) * 0.05; 
-                else if (this.state === 'resting') this.currentSpeedMult += (0.2 - this.currentSpeedMult) * 0.05; 
-                else if (this.state === 'darting') this.currentSpeedMult += (3.0 - this.currentSpeedMult) * 0.1; 
             }
 
-            update() {
-                if (this.size < this.targetSize) this.size += this.growthRate;
-                if (this.isPregnant) { this.pregnancyFrames--; if (this.widthMultiplier < 1.6) this.widthMultiplier += 0.0005; if (this.pregnancyFrames <= 0) this.layEggs(); }
-                if (draggedFish === this) { this.swimCycle += 0.8; this.finCycle += 0.5; this.draw(true); return; }
+            update(dt, deltaMs) {
+                // Growth based on real time (600,000 ms = 10 minutes from baby to adult)
+                if (this.size < this.targetSize) { 
+                    this.size += ((this.targetSize - 0.2) / 600000) * deltaMs; 
+                    if (this.size > this.targetSize) this.size = this.targetSize; 
+                }
+
+                if (this.isPregnant) { 
+                    this.pregnancyTimeMs -= deltaMs; 
+                    // Calculate tiyan ng isda base sa progress ng pregnancy!
+                    let progress = 1 - Math.max(0, this.pregnancyTimeMs / 120000);
+                    this.widthMultiplier = 1.0 + (0.6 * progress); 
+                    if (this.pregnancyTimeMs <= 0) this.layEggs(); 
+                }
+                if (draggedFish === this) { this.swimCycle += 0.8 * dt; this.finCycle += 0.5 * dt; this.draw(true); return; }
                 
-                this.updateBehavior();
+                this.updateBehavior(deltaMs);
+
+                // Movement logic uses "dt" so they don't jump out of bounds when you switch tabs
+                if (this.state === 'steady') this.currentSpeedMult += (1.0 - this.currentSpeedMult) * Math.min(1, 0.05 * dt); 
+                else if (this.state === 'resting') this.currentSpeedMult += (0.2 - this.currentSpeedMult) * Math.min(1, 0.05 * dt); 
+                else if (this.state === 'darting') this.currentSpeedMult += (3.0 - this.currentSpeedMult) * Math.min(1, 0.1 * dt);
+
                 let targetX = this.x + Math.cos(this.angle) * 50, targetY = this.y + Math.sin(this.angle) * 50, hasFood = false;
                 if (foods.length > 0) {
                     let closestFood = null, minDist = Infinity;
@@ -369,14 +405,31 @@
                 }
                 
                 let angleTo = Math.atan2(targetY - this.y, targetX - this.x); let diff = Math.atan2(Math.sin(angleTo - this.angle), Math.cos(angleTo - this.angle));
-                this.angle += diff * (hasFood ? 0.08 : 0.02); 
+                this.angle += diff * Math.min(1, (hasFood ? 0.08 : 0.02) * dt); 
                 
                 let finalSpeed = this.baseSpeed * this.currentSpeedMult;
                 if (this.size < 0.4) finalSpeed *= 1.3; if (this.isPregnant) finalSpeed *= 0.6; 
-                this.x += Math.cos(this.angle) * finalSpeed; this.y += Math.sin(this.angle) * finalSpeed; this.swimCycle += finalSpeed * 0.1;
+                this.x += Math.cos(this.angle) * finalSpeed * dt; this.y += Math.sin(this.angle) * finalSpeed * dt; this.swimCycle += finalSpeed * 0.1 * dt;
                 
-                if (this.state === 'resting') this.finCycle += 0.02; else if (this.state === 'steady') this.finCycle += 0.08; else this.finCycle = 0;
-                if (this.x < -100) this.x = width + 100; if (this.x > width + 100) this.x = -100; if (this.y < -100) this.y = height + 100; if (this.y > height + 100) this.y = -100;
+                if (this.state === 'resting') this.finCycle += 0.02 * dt; else if (this.state === 'steady') this.finCycle += 0.08 * dt; else this.finCycle = 0;
+                const margin = 20;
+
+                if (this.x < margin) {
+                    this.x = margin;
+                    this.angle = Math.PI - this.angle;
+                }
+                if (this.x > width - margin) {
+                    this.x = width - margin;
+                    this.angle = Math.PI - this.angle;
+                }
+                if (this.y < margin) {
+                    this.y = margin;
+                    this.angle = -this.angle;
+                }
+                if (this.y > height - margin) {
+                    this.y = height - margin;
+                    this.angle = -this.angle;
+                }
                 this.draw(false);
             }
 
@@ -458,50 +511,67 @@
 
         window.addEventListener('pointercancel', () => { mouseX = -1000; mouseY = -1000; draggedFish = null; draggedLily = null; });
 
-        function updateWeather() {
-            rainTimer--;
-            if (rainTimer <= 0) { isRaining = !isRaining; rainTimer = Math.random() * 2000 + 1000; }
-            if (isRaining && rainIntensity < 1) rainIntensity += 0.005;
-            if (!isRaining && rainIntensity > 0) rainIntensity -= 0.005;
-            if (rainIntensity < 0) rainIntensity = 0;
-        }
 
-        function animate() {
+        // --- MAIN ANIMATION LOOP (MAY DELTA TIME NA) ---
+        function animate(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            let deltaMs = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // dt = multiplier para sa animations. Naka-cap sa 3 para di tumalon nang malayo ang isda kapag matagal mo iniwan ang tab
+            let dt = deltaMs / 16.666; 
+            if (dt > 3) dt = 3; 
+
             ctx.clearRect(0, 0, width, height);
-            updateWeather();
+            resolveLilyCollisions();
 
-            // Spawn Mythical Koi rarely (~0.05% chance per frame)
-            if (!mythicalKoi && Math.random() < 0.0005) {
+            // Update Weather Timer (Real Time)
+            rainTimerMs -= deltaMs;
+            if (rainTimerMs <= 0) { 
+                isRaining = !isRaining; 
+                rainTimerMs = Math.random() * 16000 + 8000; 
+            }
+            if (isRaining && rainIntensity < 1) rainIntensity += 0.005 * dt;
+            if (!isRaining && rainIntensity > 0) rainIntensity -= 0.005 * dt;
+            if (rainIntensity < 0) rainIntensity = 0;
+
+            // Spawn Mythical Koi base sa totoong oras
+            if (!mythicalKoi && Math.random() < (0.00003 * deltaMs)) {
                 mythicalKoi = new MythicalKoi();
                 ripples.push({x: mythicalKoi.x, y: mythicalKoi.y, radius: 10, alpha: 0.8});
             }
 
-            for (let i = foods.length - 1; i >= 0; i--) { let f = foods[i]; f.alpha -= 0.002; ctx.fillStyle = `rgba(255, 200, 100, ${f.alpha})`; ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill(); if (f.alpha <= 0) foods.splice(i, 1); }
-            for (let i = eggClusters.length - 1; i >= 0; i--) { eggClusters[i].draw(); if(eggClusters[i].update()) eggClusters.splice(i, 1); }
+            for (let i = foods.length - 1; i >= 0; i--) { let f = foods[i]; f.alpha -= 0.002 * dt; ctx.fillStyle = `rgba(255, 200, 100, ${f.alpha})`; ctx.beginPath(); ctx.arc(f.x, f.y, f.radius, 0, Math.PI*2); ctx.fill(); if (f.alpha <= 0) foods.splice(i, 1); }
+            for (let i = eggClusters.length - 1; i >= 0; i--) { eggClusters[i].draw(); if(eggClusters[i].update(deltaMs)) eggClusters.splice(i, 1); }
             
-            // Draw Mythical Koi below regular fishes
             if (mythicalKoi) {
-                mythicalKoi.update();
+                mythicalKoi.update(dt, deltaMs);
                 mythicalKoi.draw();
                 if (mythicalKoi.alpha <= 0 && mythicalKoi.state === 'diving') {
                     mythicalKoi = null; 
                 }
             }
 
-            fishes.forEach(fish => fish.update());
+            fishes.forEach(fish => fish.update(dt, deltaMs));
             
             if (rainIntensity > 0) {
                 let numDropsToDraw = Math.floor(raindrops.length * rainIntensity);
-                for(let i = 0; i < numDropsToDraw; i++) raindrops[i].update(), raindrops[i].draw();
+                for(let i = 0; i < numDropsToDraw; i++) raindrops[i].update(dt), raindrops[i].draw();
             }
 
-            for (let i = ripples.length - 1; i >= 0; i--) { let r = ripples[i]; r.radius += 0.8; r.alpha -= 0.01; if (r.alpha <= 0) ripples.splice(i, 1); else { ctx.beginPath(); ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); ctx.strokeStyle = `rgba(150, 220, 210, ${r.alpha})`; ctx.lineWidth = 1.5; ctx.stroke(); } }
-            bugs.forEach(bug => { bug.update(); bug.draw(); });
+            for (let i = ripples.length - 1; i >= 0; i--) { let r = ripples[i]; r.radius += 0.8 * dt; r.alpha -= 0.01 * dt; if (r.alpha <= 0) ripples.splice(i, 1); else { ctx.beginPath(); ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); ctx.strokeStyle = `rgba(150, 220, 210, ${r.alpha})`; ctx.lineWidth = 1.5; ctx.stroke(); } }
+            bugs.forEach(bug => { bug.update(dt, deltaMs); bug.draw(); });
 
             lilyPads.forEach(pad => { 
                 if (pad !== draggedLily) {
-                    pad.x += pad.vx; pad.y += pad.vy; pad.angle += pad.vAngle;
-                    if (pad.x < -100) pad.x = width + 100; if (pad.x > width + 100) pad.x = -100; if (pad.y < -100) pad.y = height + 100; if (pad.y > height + 100) pad.y = -100;
+                    pad.x += pad.vx * dt; pad.y += pad.vy * dt; pad.angle += pad.vAngle * dt;
+                    const margin = pad.size;
+
+                    if (pad.x < margin) pad.x = margin;
+                    if (pad.x > width - margin) pad.x = width - margin;
+                    if (pad.y < margin) pad.y = margin;
+                    if (pad.y > height - margin) pad.y = height - margin;
+
                 }
                 ctx.save(); ctx.translate(pad.x, pad.y); 
                 let isDragged = (pad === draggedLily), currentScale = isDragged ? 1.1 : 1; ctx.scale(currentScale, currentScale); ctx.rotate(pad.angle); 
@@ -512,7 +582,8 @@
                 ctx.restore(); 
             });
             requestAnimationFrame(animate);
-        }animate();
+        }
+        requestAnimationFrame(animate); // Simulan ang loop
     </script>
 </body>
 </html>

@@ -154,6 +154,7 @@
         let width, height, draggedFish = null, draggedLily = null, isModalOpen = false, breedingParents = null, mythicalKoi = null;
         let mouseX = -1000, mouseY = -1000;
         let lastTime = 0; // PARA SA DELTA TIME
+        let lastActiveTime = Date.now();
 
         const ripples = [], lilyPads = [], fishes = [], foods = [], bugs = [], eggClusters = [], raindrops = [];
         let isRaining = false, rainIntensity = 0, rainTimerMs = Math.random() * 16000 + 8000; // in milliseconds
@@ -488,8 +489,10 @@
         window.addEventListener('pointermove', (e) => {
             if (isModalOpen) return;
             mouseX = e.clientX; mouseY = e.clientY; 
-            if (draggedLily) { draggedLily.x = e.clientX; draggedLily.y = e.clientY; } 
-            else if (draggedFish) { draggedFish.x = e.clientX; draggedFish.y = e.clientY; } 
+            if (draggedLily) { draggedLily.x = Math.max(0, Math.min(width, e.clientX));
+draggedLily.y = Math.max(0, Math.min(height, e.clientY)); } 
+            else if (draggedFish) { draggedFish.x = Math.max(0, Math.min(width, e.clientX));
+draggedFish.y = Math.max(0, Math.min(height, e.clientY)); } 
             else if (Math.random() > 0.6 && !e.target.closest('[data-tooltip]') && !e.target.closest('.glass-panel') && !e.target.closest('.mode-toggle')) {
                 ripples.push({ x: e.clientX, y: e.clientY, radius: 2, alpha: 0.3 });
             }
@@ -511,17 +514,30 @@
 
         window.addEventListener('pointercancel', () => { mouseX = -1000; mouseY = -1000; draggedFish = null; draggedLily = null; });
 
+        document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+        lastActiveTime = Date.now();
+    } else if (document.visibilityState === "visible") {
+        const now = Date.now();
+        const elapsed = now - lastActiveTime;
+
+        simulateOfflineProgress(elapsed);
+    }
+});
+
 
         // --- MAIN ANIMATION LOOP (MAY DELTA TIME NA) ---
         function animate(timestamp) {
             if (!lastTime) lastTime = timestamp;
             let deltaMs = timestamp - lastTime;
+            if (deltaMs > 1000) deltaMs = 16;
             lastTime = timestamp;
 
             // dt = multiplier para sa animations. Naka-cap sa 3 para di tumalon nang malayo ang isda kapag matagal mo iniwan ang tab
             let dt = deltaMs / 16.666; 
             if (dt > 3) dt = 3; 
 
+            
             ctx.clearRect(0, 0, width, height);
             resolveLilyCollisions();
 
@@ -584,6 +600,49 @@
             requestAnimationFrame(animate);
         }
         requestAnimationFrame(animate); // Simulan ang loop
+        function simulateOfflineProgress(elapsedMs) {
+    // limit para safe (max 5 minutes)
+    const maxSim = 300000;
+    let remaining = Math.min(elapsedMs, maxSim);
+
+    const step = 50;
+
+    while (remaining > 0) {
+        let delta = Math.min(step, remaining);
+        let dt = delta / 16.666;
+
+        // 🐟 FISH
+        fishes.forEach(f => f.update(dt, delta));
+
+        // 🥚 EGGS
+        for (let i = eggClusters.length - 1; i >= 0; i--) {
+            if (eggClusters[i].update(delta)) {
+                eggClusters.splice(i, 1);
+            }
+        }
+
+        // 🌧 WEATHER
+        rainTimerMs -= delta;
+        if (rainTimerMs <= 0) {
+            isRaining = !isRaining;
+            rainTimerMs = Math.random() * 16000 + 8000;
+        }
+
+        // ✨ MYTHICAL KOI
+        if (!mythicalKoi && Math.random() < (0.00003 * delta)) {
+            mythicalKoi = new MythicalKoi();
+        }
+
+        if (mythicalKoi) {
+            mythicalKoi.update(dt, delta);
+            if (mythicalKoi.alpha <= 0 && mythicalKoi.state === 'diving') {
+                mythicalKoi = null;
+            }
+        }
+
+        remaining -= delta;
+    }
+}
     </script>
 </body>
 </html>

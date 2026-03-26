@@ -102,6 +102,10 @@
 <body>
 
     <button id="btnHelp" class="help-btn" data-tooltip="View Pond Guide">?</button>
+    <div class="glass-panel" style="top: 40px; right: 40px; padding: 10px; display:flex; gap:10px; pointer-events: all;">
+    <button id="btnSave" class="btn btn-yes">Save</button>
+    <button id="btnLoad" class="btn btn-no">Load</button>
+</div>
     
     <div id="guidePanel" class="glass-panel info-panel">
         <h3>Pond Guide</h3>
@@ -369,7 +373,7 @@ for(let i = 0; i < 9; i++) {
 
 
         // ✅ Load saved pond state (overwrites defaults if any)
-        loadPondState();
+        //loadPondState();
 
         function resolveLilyCollisions() {
     for (let i = 0; i < lilyPads.length; i++) {
@@ -588,7 +592,6 @@ function savePondState() {
         lilyPads: lilyPads,
         eggClusters: eggClusters.map(e => e.serialize()),
         bugs: bugs,
-        mythicalKoi: mythicalKoi ? mythicalKoi.serialize() : null
     };
     localStorage.setItem('pondState', JSON.stringify(state));
 }
@@ -630,10 +633,7 @@ function loadPondState() {
         let saveTimer = 0;
         // --- MAIN ANIMATION LOOP (MAY DELTA TIME NA) ---
         function animate(timestamp) {
-            if (saveTimer > 5000) {  // every 5 seconds
-                savePondState();
-                saveTimer = 0;
-            }
+            
 
             if (!lastTime) lastTime = timestamp;
             let deltaMs = timestamp - lastTime;
@@ -750,6 +750,15 @@ function loadPondState() {
         remaining -= delta;
     }
 }
+document.getElementById('btnSave').addEventListener('click', () => {
+    savePondState();
+    alert("Pond saved!");
+});
+
+document.getElementById('btnLoad').addEventListener('click', () => {
+    loadPondState();
+    alert("Pond loaded!");
+});
     </script>
 </body>
 </html>

@@ -115,8 +115,9 @@
             <li><span>❤️</span> <strong>Breed:</strong> Drop a fish on another.</li>
             <li><span>✨</span> <strong>Spirit Koi:</strong> A rare glowing fish that occasionally emerges from the deep.</li>
         </ul>
+        
     </div>
-
+    
     <div class="mode-toggle">
         <button id="btnModeInteract" class="mode-btn active" data-tooltip="Interact Mode">🖐</button>
         <button id="btnModeFeed" class="mode-btn" data-tooltip="Feed Mode">🍕</button>
@@ -166,6 +167,32 @@
         function resizeCanvas() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
         window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
+        const UNIQUE_KOI_TYPES = [
+        {
+            name: "Galaxy Koi",
+            condition: (m, f) => m.isFairy && f.isFairy,
+            primary: { r: 80, g: 0, b: 120 },
+            secondary: { r: 0, g: 255, b: 200 },
+            isFairy: true
+        },
+        {
+            name: "Sunfire Koi",
+            condition: (m, f) =>
+                (m.primary.r > 200 && f.primary.r > 200),
+            primary: { r: 255, g: 120, b: 0 },
+            secondary: { r: 255, g: 255, b: 100 },
+            isFairy: false
+        },
+        {
+            name: "Void Koi",
+            condition: (m, f) =>
+                (m.secondary.r < 50 && f.secondary.r < 50),
+            primary: { r: 10, g: 10, b: 10 },
+            secondary: { r: 120, g: 0, b: 255 },
+            isFairy: true
+        }
+    ];
+
         class EggCluster {
             constructor(parentLily, motherPrimary, motherSecondary, fatherPrimary, fatherSecondary, motherFairy, fatherFairy) {
                 this.parentLily = parentLily; 
@@ -183,8 +210,53 @@
             }
             hatch() {
                 this.eggs.forEach(egg => {
-                    let newPrimary = mixColors(this.genes.mp, this.genes.fp), newSecondary = mixColors(this.genes.ms, this.genes.fs);
+                    let newPrimary = mixColors(this.genes.mp, this.genes.fp);
+                    let newSecondary = mixColors(this.genes.ms, this.genes.fs);
                     let isFairyBaby = false;
+
+                    // Reconstruct parent info
+                    let mother = {
+                        primary: this.genes.mp,
+                        secondary: this.genes.ms,
+                        isFairy: this.genes.mF
+                    };
+
+                    let father = {
+                        primary: this.genes.fp,
+                        secondary: this.genes.fs,
+                        isFairy: this.genes.fF
+                    };
+
+                    // 🌟 Check for UNIQUE KOI
+                    let uniqueType = null;
+                    for (let type of UNIQUE_KOI_TYPES) {
+                        if (type.condition(mother, father)) {
+                            if (Math.random() < 0.10) { // 10% chance to trigger
+                                uniqueType = type;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (uniqueType) {
+                        newPrimary = uniqueType.primary;
+                        newSecondary = uniqueType.secondary;
+                        isFairyBaby = uniqueType.isFairy;
+
+                        console.log("✨ UNIQUE KOI BORN:", uniqueType.name);
+                    } else {
+                        // Default fairy logic
+                        if (this.genes.mF || this.genes.fF) {
+                            if (Math.random() < 0.5) isFairyBaby = true;
+                        } else if (Math.random() < 0.02) {
+                            isFairyBaby = true;
+                        }
+
+                        if (isFairyBaby) {
+                            newPrimary = { r: 255, g: 150, b: 255 };
+                            newSecondary = { r: 100, g: 255, b: 255 };
+                        }
+                    }
                     if (this.genes.mF || this.genes.fF) { if (Math.random() < 0.5) isFairyBaby = true; } 
                     else if (Math.random() < 0.02) { isFairyBaby = true; }
                     
@@ -308,7 +380,20 @@
 
                 let c1 = `rgb(${this.primary.r}, ${this.primary.g}, ${this.primary.b})`; let c2 = `rgb(${this.secondary.r}, ${this.secondary.g}, ${this.secondary.b})`;
 
-                if (this.isFairy) { ctx.shadowBlur = 20; ctx.shadowColor = `rgba(${this.primary.r}, ${this.primary.g}, ${this.primary.b}, 0.8)`; }
+                if (this.isFairy) {
+                    // ✨ pulsing glow
+                    let pulse = (Math.sin(this.swimCycle * 0.5) + 1) * 0.5; // 0 → 1
+                    let glowSize = 15 + pulse * 20;
+
+                    ctx.shadowBlur = glowSize;
+                    ctx.shadowColor = `rgba(${this.primary.r}, ${this.primary.g}, ${this.primary.b}, ${0.6 + pulse * 0.4})`;
+
+                    // ✨ outer aura (soft circle glow)
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${this.secondary.r}, ${this.secondary.g}, ${this.secondary.b}, ${0.08 + pulse * 0.08})`;
+                    ctx.fill();
+                }
 
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; ctx.beginPath(); ctx.ellipse(isDragged ? -20 : -10, isDragged ? 25 : 15, 25, 10 * this.widthMultiplier, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.moveTo(-20, 0); ctx.quadraticCurveTo(-35, wiggle, -50, wiggle * 1.8); ctx.lineTo(-40, 0); ctx.fillStyle = c1; ctx.fill();
@@ -366,7 +451,7 @@
 
 //INIT?
         // Initialize lily pads
-for(let i = 0; i < 9; i++) {
+for(let i = 0; i < 6; i++) {
     lilyPads.push({ x: Math.random() * width, y: Math.random() * height, size: Math.random() * 50 + 40, angle: Math.random() * Math.PI * 2, notch: Math.random() * 0.5 + 0.2, vx: (Math.random() - 0.5) * 0.1, vy: (Math.random() - 0.5) * 0.1, vAngle: (Math.random() - 0.5) * 0.002 });
 }
 

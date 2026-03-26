@@ -97,12 +97,41 @@
             #time { font-size: 2.2rem; } .help-btn { top: 20px; left: 20px; }
             .info-panel { top: 75px; left: 20px; right: 20px; width: auto; } .mode-toggle { bottom: 20px; }
         }
+        .subtle-panel {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+
+    padding: 6px 8px;
+    display: flex;
+    gap: 6px;
+
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(6px);
+
+    opacity: 0.5;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: all;
+}
+
+/* 👀 Only visible when hovered */
+.subtle-panel:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+.subtle-panel .btn {
+    padding: 6px 12px;
+    font-size: 0.7rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+}
     </style>
 </head>
 <body>
 
     <button id="btnHelp" class="help-btn" data-tooltip="View Pond Guide">?</button>
-    <div class="glass-panel" style="top: 40px; right: 40px; padding: 10px; display:flex; gap:10px; pointer-events: all;">
+    <div class="glass-panel subtle-panel">
     <button id="btnSave" class="btn btn-yes">Save</button>
     <button id="btnLoad" class="btn btn-no">Load</button>
 </div>
